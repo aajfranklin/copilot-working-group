@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { useEffect, useRef } from 'react';
 import { ProductDetail } from './index';
 import { CartProvider } from '../../contexts/CartContext';
+import { useCartContext } from '../../contexts/useCartContext';
 import type { Product } from '../../types/product';
 
 // Mock product data for testing
@@ -73,18 +75,34 @@ const renderProductDetail = (productId: number = 1) => {
     },
   });
 
+  // Wrapper component to expose cart context
+  const cartRef = { current: null as ReturnType<typeof useCartContext> | null };
+  
+  const TestWrapper = () => {
+    const cart = useCartContext();
+    const ref = useRef(cart);
+    
+    useEffect(() => {
+      ref.current = cart;
+      cartRef.current = cart;
+    }, [cart]);
+    
+    return null;
+  };
+
   const result = render(
     <QueryClientProvider client={queryClient}>
       <CartProvider>
+        <TestWrapper />
         <RouterProvider router={router} />
       </CartProvider>
     </QueryClientProvider>
   );
 
-  return { ...result, queryClient };
+  return { ...result, getCartContext: () => cartRef.current };
 };
 
-describe('ProductDetail Component - Behaviour-Driven Tests', () => {
+describe('ProductDetail Component - Behavior-Driven Tests', () => {
   // Start MSW server before all tests
   beforeAll(() => {
     server.listen({ onUnhandledRequest: 'error' });
@@ -156,12 +174,16 @@ describe('ProductDetail Component - Behaviour-Driven Tests', () => {
     it('should allow users to add the displayed product to their cart', async () => {
       // Given: A user is viewing a product they want to purchase
       const user = userEvent.setup();
-      renderProductDetail(1);
+      const { getCartContext } = renderProductDetail(1);
 
       // Wait for product to load
       await waitFor(() => {
         expect(screen.getByText(mockProduct.title)).toBeInTheDocument();
       });
+
+      // Verify cart is initially empty
+      const cartBefore = getCartContext();
+      expect(cartBefore?.items).toHaveLength(0);
 
       // When: The user clicks the "Add to Cart" button
       const addToCartButton = screen.getByRole('button', { name: /add to cart/i });
@@ -169,10 +191,12 @@ describe('ProductDetail Component - Behaviour-Driven Tests', () => {
       await user.click(addToCartButton);
 
       // Then: The product should be added to the user's cart
-      // We verify this by checking the cart state through the UI
-      // In a real app, we might check for a toast notification, cart badge update, etc.
-      // For this test, we ensure the button is still functional after click
-      expect(addToCartButton).toBeInTheDocument();
+      await waitFor(() => {
+        const cartAfter = getCartContext();
+        expect(cartAfter?.items).toHaveLength(1);
+        expect(cartAfter?.items[0].product.id).toBe(mockProduct.id);
+        expect(cartAfter?.items[0].quantity).toBe(1);
+      });
     });
   });
 
