@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
+import userEvent from '@testing-library/user-event';
 import { ProductDetail } from './index';
 import type { Product } from '../../types/product';
 
@@ -141,27 +141,30 @@ describe('ProductDetail Component - Behaviour-Driven Tests', () => {
   });
 
   describe('Scenario: User views product layout and presentation', () => {
-    it('should display product details in a well-structured and visually organized layout', () => {
+    it('should display all key product components visible to the user', () => {
       // Given: A user opens a product detail page
       setupProductDetailTest(mockProduct);
-      const { container } = render(<ProductDetail />);
+      render(<ProductDetail />);
 
-      // Then: The page should have a structured container layout
-      const containerDiv = container.querySelector('[class*="container"]');
-      expect(containerDiv).toBeInTheDocument();
-
-      // And: The product content should be organized in a grid layout
-      const productDiv = container.querySelector('[class*="product"]');
-      expect(productDiv).toBeInTheDocument();
-
-      // And: The information section should group related details together
-      const infoSection = container.querySelector('[class*="infoSection"]');
-      expect(infoSection).toBeInTheDocument();
-
-      // And: All key components should be present and visible to the user
+      // Then: All key components should be present and visible to the user
+      // Navigation element
       expect(screen.getByText('← Back to Products')).toBeInTheDocument();
+      
+      // Product image
       expect(screen.getByAltText(mockProduct.title)).toBeInTheDocument();
+      
+      // Product information
       expect(screen.getByText(mockProduct.title)).toBeInTheDocument();
+      expect(screen.getByText(`$${mockProduct.price.toFixed(2)}`)).toBeInTheDocument();
+      expect(screen.getByText(mockProduct.description)).toBeInTheDocument();
+      
+      // Product metadata
+      expect(screen.getByText('Brand')).toBeInTheDocument();
+      expect(screen.getByText('Category')).toBeInTheDocument();
+      expect(screen.getByText('Stock')).toBeInTheDocument();
+      expect(screen.getByText('Rating')).toBeInTheDocument();
+      
+      // Call to action
       expect(screen.getByRole('button', { name: /add to cart/i })).toBeInTheDocument();
     });
   });
