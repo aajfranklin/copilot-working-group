@@ -14,7 +14,7 @@ vi.mock('../../contexts/useCartContext', () => ({
 }));
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, to, ...props }: any) => (
+  Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) => (
     <a href={to} {...props}>
       {children}
     </a>
@@ -50,14 +50,21 @@ const setupProductDetailTest = (
     data: product,
     isLoading: false,
     error: null,
-  } as any);
+    // Add other query fields that might be accessed
+    isSuccess: !!product,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+  } as ReturnType<typeof useProduct>);
 
   vi.mocked(useCartContext).mockReturnValue({
     addToCart,
-    cart: [],
+    items: [],
     removeFromCart: vi.fn(),
     updateQuantity: vi.fn(),
     clearCart: vi.fn(),
+    totalItems: 0,
+    totalPrice: 0,
   });
 
   return { addToCart };
